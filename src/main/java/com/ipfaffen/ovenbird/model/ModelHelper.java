@@ -17,6 +17,7 @@ import com.ipfaffen.ovenbird.commons.DataList;
 import com.ipfaffen.ovenbird.commons.PagingHelper;
 import com.ipfaffen.ovenbird.commons.ReflectionUtil;
 import com.ipfaffen.ovenbird.commons.exception.ValidationException;
+import com.ipfaffen.ovenbird.model.builder.ObjectBuilder;
 import com.ipfaffen.ovenbird.model.connection.Database;
 import com.ipfaffen.ovenbird.model.exception.ConnectionException;
 import com.ipfaffen.ovenbird.model.exception.ModelException;
@@ -31,80 +32,32 @@ public class ModelHelper {
 
 	private Database db;
 
-	/**
-	 * @param db
-	 */
 	public ModelHelper(Database db) {
 		this.db = db;
 	}
 
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(String sql, Class<D> dtoClass, Object... parameters) throws ConnectionException, ModelException {
-		return find(sql, dtoClass, Arrays.asList(parameters));
+	public <D> DataList<D> find(String sql, Class<D> resultClass, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql, resultClass, Arrays.asList(parameters));
 	}
 
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(String sql, Class<D> dtoClass) throws ConnectionException, ModelException {
-		return find(sql, dtoClass, (List<Object>) null);
+	public <D> DataList<D> find(String sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql, resultClass, (List<Object>) null);
 	}
 
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(SqlBuilder sql, Class<D> dtoClass, Object... parameters) throws ConnectionException, ModelException {
-		return find(sql.toString(), dtoClass, Arrays.asList(parameters));
+	public <D> DataList<D> find(SqlBuilder sql, Class<D> resultClass, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, Arrays.asList(parameters));
 	}
 
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(SqlBuilder sql, Class<D> dtoClass) throws ConnectionException, ModelException {
-		return find(sql.toString(), dtoClass, (List<Object>) null);
+	public <D> DataList<D> find(SqlBuilder sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, (List<Object>) null);
 	}	
 
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(SqlStatement sql, Class<D> dtoClass) throws ConnectionException, ModelException {
-		return find(sql.toString(), dtoClass, sql.getParameters());
+	public <D> DataList<D> find(SqlStatement sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, sql.getParameters());
 	}
 
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	@SuppressWarnings("unchecked")
-	public <D extends ModelDto<D>> DataList<D> find(String sql, Class<D> dtoClass, List<Object> parameters) throws ConnectionException, ModelException {
+	public <D> DataList<D> find(String sql, Class<D> resultClass, List<Object> parameters) throws ConnectionException, ModelException {
 		PreparedStatement statement = null;
 		ResultSet resultSet = null;
 		try {
@@ -112,16 +65,65 @@ public class ModelHelper {
 
 			statement = buildFindPreparedStatement(sql, parameters);
 			resultSet = statement.executeQuery();
+			DataList<D> resultList = new DataList<D>();
 
-			DataList<D> dtoList = new DataList<D>();
-			FieldList fields = ModelUtil.getDtoFields(dtoClass);
-			
-			while(resultSet.next()) {
-				D dto = (D) ReflectionUtil.newInstance(dtoClass);
-				ModelUtil.populateFields(dto, fields, resultSet);
-				dtoList.add(dto);
+			if(ReflectionUtil.newInstance(resultClass) instanceof ModelDto) {
+				Class<? extends ModelDto<?>> dtoClass = (Class<? extends ModelDto<?>>) resultClass;
+				FieldList fields = ModelUtil.getDtoFields(dtoClass);
+				while(resultSet.next()) {
+					D dto = (D) ReflectionUtil.newInstance(dtoClass);
+					ModelUtil.populateFields((ModelDto<?>) dto, fields, resultSet);
+					resultList.add(dto);
+				}
+				return resultList;
 			}
-			return dtoList;
+			while(resultSet.next()) {
+				resultList.add(resultSet.getObject(1, resultClass));
+			}
+			return resultList;
+		}
+		catch(Exception e) {
+			throw new ModelException(String.format("Occurred a problem in the dto find: %s", e.getMessage()), e);
+		}
+		finally {
+			close(resultSet);
+			close(statement);
+			closeConnection();
+		}
+	}
+	
+	public <D> DataList<D> find(String sql, ObjectBuilder<D> builder, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql, builder, Arrays.asList(parameters));
+	}
+
+	public <D> DataList<D> find(String sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql, builder, (List<Object>) null);
+	}
+
+	public <D> DataList<D> find(SqlBuilder sql, ObjectBuilder<D> builder, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, Arrays.asList(parameters));
+	}
+
+	public <D> DataList<D> find(SqlBuilder sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, (List<Object>) null);
+	}	
+
+	public <D> DataList<D> find(SqlStatement sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, sql.getParameters());
+	}
+
+	public <D> DataList<D> find(String sql, ObjectBuilder<D> builder, List<Object> parameters) throws ConnectionException, ModelException {
+		PreparedStatement statement = null;
+		ResultSet resultSet = null;
+		try {
+			openConnection();
+			statement = buildFindPreparedStatement(sql, parameters);
+			resultSet = statement.executeQuery();
+			DataList<D> resultList = new DataList<D>();
+			while(resultSet.next()) {
+				resultList.add(builder.build(resultSet));
+			}
+			return resultList;
 		}
 		catch(Exception e) {
 			throw new ModelException(String.format("Occurred a problem in the dto find: %s", e.getMessage()), e);
@@ -133,65 +135,26 @@ public class ModelHelper {
 		}
 	}
 
-	/**
-	 * @param sql
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(String sql, Object... parameters) throws ConnectionException, ModelException {
 		return find(sql, Arrays.asList(parameters));
 	}
 
-	/**
-	 * @param sql
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(String sql) throws ConnectionException, ModelException {
 		return find(sql, (List<Object>) null);
 	}
 
-	/**
-	 * @param sql
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(SqlBuilder sql, Object... parameters) throws ConnectionException, ModelException {
 		return find(sql.toString(), Arrays.asList(parameters));
 	}
 
-	/**
-	 * @param sql
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(SqlBuilder sql) throws ConnectionException, ModelException {
 		return find(sql.toString(), (List<Object>) null);
 	}
 	
-	/**
-	 * @param sql
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(SqlStatement sql) throws ConnectionException, ModelException {
 		return find(sql.toString(), sql.getParameters());
 	}
-	
-	/**
-	 * @param sql
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
+
 	public CachedRowSet find(String sql, List<Object> parameters) throws ConnectionException, ModelException {
 		PreparedStatement statement = null;
 		ResultSet resultSet = null;
@@ -216,12 +179,6 @@ public class ModelHelper {
 		}
 	}
 	
-	/**
-	 * @param sql
-	 * @param parameters
-	 * @return
-	 * @throws SQLException
-	 */
 	protected PreparedStatement buildFindPreparedStatement(String sql, List<Object> parameters) throws SQLException {
 		PreparedStatement statement = getConnection().prepareStatement(sql, TYPE_SCROLL_SENSITIVE, CONCUR_READ_ONLY);
 		statement.setFetchSize(Integer.MIN_VALUE);
@@ -231,14 +188,6 @@ public class ModelHelper {
 		return statement;
 	}
 
-	/**
-	 * @param countSql
-	 * @param pageSize
-	 * @param pageNumber
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public PagingHelper buildPaging(String countSql, int pageSize, int pageNumber) throws ConnectionException, ModelException {
 		PreparedStatement statement = null;
 		ResultSet resultSet = null;
@@ -267,13 +216,7 @@ public class ModelHelper {
 			closeConnection();
 		}
 	}
-	
-	/**
-	 * @param sql
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
+
 	public int execute(SqlStatement sql) throws ConnectionException, ModelException {
 		PreparedStatement statement = null;
 		try {
@@ -292,10 +235,6 @@ public class ModelHelper {
 		}
 	}
 
-	/**
-	 * @param transaction
-	 * @throws ModelException
-	 */
 	public void start(Transaction transaction) throws ModelException {
 		try {
 			boolean commit = true;
@@ -318,11 +257,7 @@ public class ModelHelper {
 			throw new ModelException(e.getMessage(), e);
 		}
 	}
-	
-	/**
-	 * @param transaction
-	 * @throws ModelException
-	 */
+
 	public <T> T start(ResultTransaction<T> transaction) throws ModelException {
 		try {
 			if(transaction.isReadOnly()){
@@ -359,11 +294,6 @@ public class ModelHelper {
 
 	/**
 	 * Add parameters to prepared statement.
-	 * 
-	 * @param preparedStatement
-	 * @param parameters
-	 * @param indexFrom
-	 * @throws SQLException
 	 */
 	public void addParameters(PreparedStatement preparedStatement, List<Object> parameters, int indexFrom) throws SQLException {
 		for(int i = 0; i < parameters.size(); i++) {
@@ -373,18 +303,11 @@ public class ModelHelper {
 
 	/**
 	 * Add parameters to prepared statement.
-	 * 
-	 * @param preparedStatement
-	 * @param parameters
-	 * @throws SQLException
 	 */
 	public void addParameters(PreparedStatement preparedStatement, List<Object> parameters) throws SQLException {
 		addParameters(preparedStatement, parameters, 1);
 	}
 
-	/**
-	 * @param statement
-	 */
 	public void close(PreparedStatement statement) {
 		try {
 			if(statement != null)
@@ -394,9 +317,6 @@ public class ModelHelper {
 		}
 	}
 
-	/**
-	 * @param resultSet
-	 */
 	public void close(ResultSet resultSet) {
 		try {
 			if(resultSet != null)
@@ -406,45 +326,26 @@ public class ModelHelper {
 		}
 	}
 
-	/**
-	 * @throws ConnectionException
-	 */
 	public void openTransaction() throws ConnectionException {
 		db.openTransaction();
 	}
 
-	/**
-	 * @throws ConnectionException
-	 */
 	public void openConnection() throws ConnectionException {
 		db.openConnection();
 	}
 
-	/**
-	 * @param commit
-	 * @throws ConnectionException
-	 */
 	public void closeTransaction(boolean commit) throws ConnectionException {
 		db.closeTransaction(commit);
 	}
 
-	/**
-	 * @throws ConnectionException
-	 */
 	public void closeConnection() throws ConnectionException {
 		db.closeConnection();
 	}
-	
-	/**
-	 * @return
-	 */
+
 	public Connection getConnection() {
 		return db.getConnection();
 	}
 
-	/**
-	 * @return
-	 */
 	public Database getDatabase() {
 		return db;
 	}

@@ -23,6 +23,7 @@ import com.ipfaffen.ovenbird.commons.PagedList;
 import com.ipfaffen.ovenbird.commons.PagingHelper;
 import com.ipfaffen.ovenbird.commons.ReflectionUtil;
 import com.ipfaffen.ovenbird.model.annotation.Interceptor;
+import com.ipfaffen.ovenbird.model.builder.ObjectBuilder;
 import com.ipfaffen.ovenbird.model.connection.ConnectionHandler;
 import com.ipfaffen.ovenbird.model.connection.Database;
 import com.ipfaffen.ovenbird.model.criteria.Criteria;
@@ -53,16 +54,10 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 	private String tableName;
 	private String basePackage;
 
-	/**
-	 * @param db
-	 */
 	public ModelDao(Database db) {
 		initialize(db);
 	}
 
-	/**
-	 * @param db
-	 */
 	@SuppressWarnings("unchecked")
 	private void initialize(Database db) {
 		this.db = db;
@@ -85,21 +80,12 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		basePackage = StringUtils.substringBeforeLast(entityClass.getPackage().getName(), ".");
 	}
 
-	/**
-	 * @return
-	 */
 	protected Class<?>[] getRelatedEntityClass() {
 		return new Class<?>[]{};
 	}
 
 	/**
 	 * Insert record in the database.
-	 * 
-	 * @param entity
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public T insert(T entity) throws ConnectionException, ModelException, InterceptorException {
 		boolean success = true;
@@ -128,10 +114,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param entity
-	 * @throws ModelException
-	 */
 	private void insertRecord(T entity) throws ModelException {
 		PreparedStatement statement = null;
 		ResultSet generatedKeys = null;
@@ -155,11 +137,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param fields
-	 * @return
-	 * @throws SQLException
-	 */
 	private PreparedStatement buildInsertPreparedStatement(FieldList fields) throws SQLException {
 		PreparedStatement statement = getConnection().prepareStatement(dialect().buildInsert(tableName, fields), Statement.RETURN_GENERATED_KEYS);
 		for(int i = 1; i <= fields.size(); i++) {
@@ -170,12 +147,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Update record in the database.
-	 * 
-	 * @param entity
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public T update(T entity) throws ConnectionException, ModelException, InterceptorException {
 		if(updateByCriteria(idCriteria(entity.getId()), entity) <= 0) {
@@ -185,12 +156,7 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 	}
 
 	/**
-	 * @param criteria
-	 * @param entity
 	 * @return number of records updated.
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	private int updateByCriteria(Criteria criteria, T entity) throws ConnectionException, ModelException, InterceptorException {
 		boolean success = true;
@@ -222,21 +188,14 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 	}
 
 	/**
-	 * @param fieldName
-	 * @param fieldValue
 	 * @return number of records updated.
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public int updateAll(String fieldName, Object fieldValue) throws ConnectionException, ModelException {
 		return updateAll(new NameValue(fieldName, fieldValue));
 	}
 	
 	/**
-	 * @param field
 	 * @return number of records updated.
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public int updateAll(final NameValue field) throws ConnectionException, ModelException {
 		return updateAll(new ArrayList<NameValue>(){{add(field);}});
@@ -244,120 +203,55 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 	
 	/**
 	 * Update all records.
-	 * 
 	 * @param fields - field to be updated [fieldName, fieldValue].
 	 * @return number of records updated.
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public int updateAll(List<NameValue> fields) throws ConnectionException, ModelException {
 		return updateByCriteria(fields, criteria());
 	}
 	
-	/**
-	 * @param fieldName
-	 * @param fieldValue
-	 * @param id
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public int updateById(String fieldName, Object fieldValue, Object id) throws ConnectionException, ModelException {
 		return updateById(new NameValue(fieldName, fieldValue), id);
 	}
 
-	/**
-	 * @param field
-	 * @param id
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public int updateById(final NameValue field, Object id) throws ConnectionException, ModelException {
 		return updateById(new ArrayList<NameValue>(){{add(field);}}, id);
 	}
 
-	/**
-	 * @param fields
-	 * @param id
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public int updateById(List<NameValue> fields, Object id) throws ConnectionException, ModelException {
 		return updateByCriteria(fields, idCriteria(id));
 	}
 
-	/**
-	 * @param fieldName
-	 * @param fieldValue
-	 * @param condition
-	 * @param conditionValues
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public int updateByCondition(String fieldName, Object fieldValue, String condition, Object... conditionValues) throws ConnectionException, ModelException {
 		return updateByCondition(new NameValue(fieldName, fieldValue), condition, conditionValues);
 	}
 
-	/**
-	 * @param field
-	 * @param condition
-	 * @param conditionValues
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public int updateByCondition(final NameValue field, String condition, Object... conditionValues) throws ConnectionException, ModelException {
 		return updateByCondition(new ArrayList<NameValue>(){{add(field);}}, condition, conditionValues);
 	}
 	
 	/**
 	 * Update records filtering by condition (not pass through the interceptor).
-	 * 
 	 * @param fields - field to be updated [fieldName, fieldValue].
 	 * @param condition - structure: \@company.name = ? AND \@recordDate = ?<br>
-	 * @param conditionValues
 	 * @return number of records updated.
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public int updateByCondition(List<NameValue> fields, String condition, Object... conditionValues) throws ConnectionException, ModelException {
 		return updateByCriteria(fields, conditionCriteria(condition, conditionValues));
 	}
 	
-	/**
-	 * @param fieldName
-	 * @param fieldValue
-	 * @param criteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public int updateByCriteria(String fieldName, Object fieldValue, Criteria criteria) throws ConnectionException, ModelException {
 		return updateByCriteria(new NameValue(fieldName, fieldValue), criteria);
 	}
 
-	/**
-	 * @param field
-	 * @param criteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public int updateByCriteria(final NameValue field, Criteria criteria) throws ConnectionException, ModelException {
 		return updateByCriteria(new ArrayList<NameValue>(){{add(field);}}, criteria);
 	}
 	
 	/**
 	 * Update records filtering by criteria (not pass through the interceptor).
-	 * 
 	 * @param fields - field to be updated [fieldName, fieldValue].
-	 * @param criteria
 	 * @return number of records updated.
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public int updateByCriteria(List<NameValue> fields, Criteria criteria) throws ConnectionException, ModelException {
 		return updateByCriteria(criteria, ModelUtil.buildFieldList(entityClass, fields));
@@ -365,12 +259,7 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Update given fields by criteria (not pass through interceptor).
-	 * 
-	 * @param criteria
-	 * @param fields
 	 * @return number of records updated.
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	private int updateByCriteria(Criteria criteria, FieldList fields) throws ConnectionException, ModelException {
 		boolean success = true;
@@ -391,12 +280,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		return updatedRecords;
 	}
 
-	/**
-	 * @param criteria
-	 * @param fields
-	 * @return
-	 * @throws ModelException
-	 */
 	private int updateRecord(Criteria criteria, FieldList fields) throws ModelException {
 		PreparedStatement statement = null;
 		try {
@@ -411,12 +294,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param criteria
-	 * @param fields
-	 * @return
-	 * @throws SQLException
-	 */
 	private PreparedStatement buildUpdatePreparedStatement(Criteria criteria, FieldList fields) throws SQLException {
 		PreparedStatement statement = getConnection().prepareStatement(dialect().buildUpdate(tableName, criteria, fields));
 		for(int i = 1; i <= fields.size(); i++) {
@@ -428,12 +305,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * If the entity has a filled id then update the record otherwise insert a new one.
-	 * 
-	 * @param entity
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public T save(T entity) throws ConnectionException, ModelException, InterceptorException {
 		if(entity.getId() == null) {
@@ -446,12 +317,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete the record from the database (do not remove the relationships).
-	 * 
-	 * @param entity
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public T delete(T entity) throws ConnectionException, ModelException, InterceptorException {
 		if(interceptor != null) {
@@ -465,11 +330,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete the record with given id from the database (do not remove the relationships).
-	 * 
-	 * @param id
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public void deleteById(Object id) throws ConnectionException, ModelException, InterceptorException {
 		if(deleteByCriteria(idCriteria(id)) <= 0) {
@@ -479,12 +339,7 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete records from the database filtering by criteria (do not remove the relationships).
-	 * 
-	 * @param criteria
 	 * @return number of records deleted.
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public int deleteByCriteria(Criteria criteria) throws ConnectionException, ModelException, InterceptorException {
 		return deleteByCriteria(criteria, false);
@@ -492,13 +347,8 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete records from the database filtering by condition (do not remove the relationships).
-	 * 
 	 * @param condition - structure: \@company.name = ? AND \@recordDate = ?<br>
-	 * @param conditionValues
 	 * @return number of records deleted.
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public int deleteByCondition(String condition, Object... conditionValues) throws ConnectionException, ModelException, InterceptorException {
 		return deleteByCriteria(conditionCriteria(condition, conditionValues), false);
@@ -506,12 +356,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete the record from the database but first delete its relationships.
-	 * 
-	 * @param entity
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public T deleteCascade(T entity) throws ConnectionException, ModelException, InterceptorException {
 		if(interceptor != null) {
@@ -525,11 +369,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete the record with given id from the database but first delete its relationships.
-	 * 
-	 * @param id
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public void deleteCascadeById(Object id) throws ConnectionException, ModelException, InterceptorException {
 		if(deleteCascadeByCriteria(idCriteria(id)) <= 0) {
@@ -539,12 +378,7 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete records from the database filtering by criteria but first delete its relationships.
-	 * 
-	 * @param criteria
 	 * @return number of records deleted.
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public int deleteCascadeByCriteria(Criteria criteria) throws ConnectionException, ModelException, InterceptorException {
 		return deleteByCriteria(criteria, true);
@@ -552,25 +386,15 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete records from the database filtering by condition but first delete its relationships.
-	 * 
 	 * @param condition - structure: \@company.name = ? AND \@recordDate = ?<br>
-	 * @param conditionValues
 	 * @return number of records deleted.
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public int deleteCascadeByCondition(String condition, Object... conditionValues) throws ConnectionException, ModelException, InterceptorException {
 		return deleteByCriteria(conditionCriteria(condition, conditionValues), true);
 	}
 
 	/**
-	 * @param criteria
-	 * @param cascadeDelete
 	 * @return number of records deleted.
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	private int deleteByCriteria(Criteria criteria, boolean cascadeDelete) throws ConnectionException, ModelException, InterceptorException {
 		boolean success = true;
@@ -601,11 +425,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		return deletedRecords;
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws ModelException
-	 */
 	private int deleteRecord(Criteria criteria) throws ModelException {
 		PreparedStatement statement = null;
 		try {
@@ -622,11 +441,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Delete the relationships.
-	 * 
-	 * @param entity
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	private void deleteRelated(List<T> entityList) throws ConnectionException, ModelException, InterceptorException {
 		if(entityList.isEmpty()) {
@@ -655,11 +469,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param fields
-	 * @return
-	 * @throws SQLException
-	 */
 	private PreparedStatement buildDeletePreparedStatement(Criteria criteria) throws SQLException {
 		PreparedStatement statement = getConnection().prepareStatement(dialect().buildDelete(tableName, criteria));
 		helper().addParameters(statement, criteria.getConditionsValues());
@@ -668,12 +477,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Load record with given id.
-	 * 
-	 * @param id
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public T loadById(Object id) throws ConnectionException, ModelException, InterceptorException {
 		if(id == null) {
@@ -684,12 +487,7 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Load record filtering by condition.
-	 * 
 	 * @param condition - structure: \@company.name = ? AND \@recordDate = ?<br>
-	 * @param conditionValues
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public T loadByCondition(String condition, Object... conditionValues) throws ConnectionException, ModelException, InterceptorException {
 		return loadByCriteria(conditionCriteria(condition, conditionValues));
@@ -697,12 +495,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Load record filtering by criteria.
-	 * 
-	 * @param criteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public T loadByCriteria(Criteria criteria) throws ConnectionException, ModelException, InterceptorException {
 		boolean success = true;
@@ -732,11 +524,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws ModelException
-	 */
 	private T loadRecord(Criteria criteria) throws ModelException {
 		PreparedStatement statement = null;
 		ResultSet resultSet = null;
@@ -771,11 +558,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Find all records.
-	 * 
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public DataList<T> findAll() throws ConnectionException, ModelException, InterceptorException {
 		return findByCriteria(criteria());
@@ -783,13 +565,7 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Find records filtering by condition.
-	 * 
 	 * @param condition - structure: \@company.name = ? AND \@recordDate = ?<br>
-	 * @param conditionValues
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public DataList<T> findByCondition(String condition, Object... conditionValues) throws ConnectionException, ModelException, InterceptorException {
 		return findByCriteria(conditionCriteria(condition, conditionValues));
@@ -797,12 +573,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Find records filtering by criteria.
-	 * 
-	 * @param criteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 * @throws InterceptorException
 	 */
 	public DataList<T> findByCriteria(Criteria criteria) throws ConnectionException, ModelException, InterceptorException {
 		try {
@@ -816,11 +586,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Find records filtering by criteria and paging.
-	 * 
-	 * @param pagingCriteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public PagedList<T> findByCriteria(PagingCriteria pagingCriteria) throws ConnectionException, ModelException {
 		try {
@@ -844,11 +609,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws ModelException
-	 */
 	private DataList<T> findRecords(Criteria criteria) throws ModelException {
 		PreparedStatement statement = null;
 		ResultSet resultSet = null;
@@ -880,45 +640,18 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws SQLException
-	 */
 	private PreparedStatement buildFindPreparedStatement(Criteria criteria) throws SQLException {
 		return helper().buildFindPreparedStatement(dialect().buildFind(tableName, criteria), criteria.getConditionsValues());
 	}
-	
-	/**
-	 * @param fieldName
-	 * @param id
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
+
 	public <X> X getById(String fieldName, Object id) throws ConnectionException, ModelException {
 		return getByCriteria(fieldName, idCriteria(id));
 	}
 
-	/**
-	 * @param fieldName
-	 * @param condition
-	 * @param conditionValues
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public <X> X getByCondition(String fieldName, String condition, Object... conditionValues) throws ConnectionException, ModelException {
 		return getByCriteria(fieldName, conditionCriteria(condition, conditionValues));
 	}
 	
-	/**
-	 * @param fieldName
-	 * @param criteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	@SuppressWarnings("unchecked")
 	public <X> X getByCriteria(String fieldName, Criteria criteria) throws ConnectionException, ModelException {
 		Object[] result = getByCriteria(new String[]{fieldName}, criteria);
@@ -928,36 +661,14 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		return (X) result[0];
 	}
 	
-	/**
-	 * @param fieldsNames
-	 * @param id
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public Object[] getById(String[] fieldsNames, Object id) throws ConnectionException, ModelException {
 		return getByCriteria(fieldsNames, idCriteria(id));
 	}
 
-	/**
-	 * @param fieldsNames
-	 * @param condition
-	 * @param conditionValues
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public Object[] getByCondition(String[] fieldsNames, String condition, Object... conditionValues) throws ConnectionException, ModelException {
 		return getByCriteria(fieldsNames, conditionCriteria(condition, conditionValues));
 	}
 	
-	/**
-	 * @param fieldsNames
-	 * @param criteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public Object[] getByCriteria(String[] fieldsNames, Criteria criteria) throws ConnectionException, ModelException {
 		try {
 			openConnection();
@@ -968,12 +679,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 	
-	/**
-	 * @param fieldsNames
-	 * @param criteria
-	 * @return
-	 * @throws ModelException
-	 */
 	private Object[] get(String[] fieldsNames, Criteria criteria) throws ModelException {
 		PreparedStatement statement = null;
 		ResultSet resultSet = null;
@@ -1005,12 +710,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}	
 	
-	/**
-	 * @param criteria
-	 * @param fields
-	 * @return
-	 * @throws SQLException
-	 */
 	private PreparedStatement buildGetPreparedStatement(Criteria criteria, List<String> fields) throws SQLException {
 		PreparedStatement statement = getConnection().prepareStatement(dialect().buildGet(tableName, criteria, fields), TYPE_SCROLL_SENSITIVE, CONCUR_READ_ONLY);
 		statement.setFetchSize(Integer.MIN_VALUE);
@@ -1020,10 +719,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Get the number of records.
-	 * 
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public int countAll() throws ConnectionException, ModelException {
 		return countByCriteria(criteria());
@@ -1031,12 +726,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Get the number of records filtering by condition.
-	 * 
-	 * @param condition - structure: \@company.name = ? AND \@recordDate = ?<br>
-	 * @param conditionValues
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public int countByCondition(String condition, Object... conditionValues) throws ConnectionException, ModelException {
 		return countByCriteria(conditionCriteria(condition, conditionValues));
@@ -1044,11 +733,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Get the number of records filtering by criteria.
-	 * 
-	 * @param criteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public int countByCriteria(Criteria criteria) throws ConnectionException, ModelException {
 		try {
@@ -1060,11 +744,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws ModelException
-	 */
 	private int countRecords(Criteria criteria) throws ModelException {
 		PreparedStatement statement = null;
 		ResultSet resultSet = null;
@@ -1085,11 +764,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws SQLException
-	 */
 	private PreparedStatement buildCountPreparedStatement(Criteria criteria) throws SQLException {
 		PreparedStatement statement = getConnection().prepareStatement(dialect().buildCount(tableName, criteria), TYPE_SCROLL_SENSITIVE, CONCUR_READ_ONLY);
 		statement.setFetchSize(Integer.MIN_VALUE);
@@ -1097,32 +771,17 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		return statement;
 	}
 
-	/**
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public boolean exists() throws ConnectionException, ModelException {
 		return existsByCriteria(criteria());
 	}
 
 	/**
 	 * @param condition - structure: \@company.name = ? AND \@recordDate = ?<br>
-	 * @param conditionValues
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
 	 */
 	public boolean existsByCondition(String condition, Object... conditionValues) throws ConnectionException, ModelException {
 		return existsByCriteria(conditionCriteria(condition, conditionValues));
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public boolean existsByCriteria(Criteria criteria) throws ConnectionException, ModelException {
 		try {
 			openConnection();
@@ -1133,11 +792,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws ModelException
-	 */
 	private boolean existsRecord(Criteria criteria) throws ModelException {
 		PreparedStatement statement = null;
 		ResultSet resultSet = null;
@@ -1156,11 +810,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		}
 	}
 
-	/**
-	 * @param criteria
-	 * @return
-	 * @throws SQLException
-	 */
 	private PreparedStatement buildExistsPreparedStatement(Criteria criteria) throws SQLException {
 		PreparedStatement statement = getConnection().prepareStatement(dialect().buildExists(tableName, criteria), TYPE_SCROLL_SENSITIVE, CONCUR_READ_ONLY);
 		statement.setFetchSize(Integer.MIN_VALUE);
@@ -1168,26 +817,16 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		return statement;
 	}
 
-	/**
-	 * @return
-	 */
 	public Criteria criteria() {
 		return new Criteria(entityClass);
 	}
-	
-	/**
-	 * @param resultLimit
-	 * @return
-	 */
+
 	public Criteria criteria(int resultLimit) {
 		return new Criteria(entityClass, resultLimit);
 	}
 	
 	/**
 	 * Build criteria that filters by id.
-	 * 
-	 * @param id
-	 * @return
 	 */
 	public Criteria idCriteria(Object id) {
 		return criteria().addFilter(entityIdField.getAttributeName(), id);
@@ -1195,215 +834,155 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 
 	/**
 	 * Build criteria with condition.
-	 * 
-	 * @param condition
-	 * @param conditionValues
-	 * @return
 	 */
 	public Criteria conditionCriteria(String condition, Object... conditionValues) {
 		return criteria().addCondition(condition, conditionValues);
 	}
 	
-	/**
-	 * @param pageSize
-	 * @return
-	 */
 	public PagingCriteria pagingCriteria(int pageSize) {
 		return new PagingCriteria(entityClass, pageSize);
 	}
 
-	/**
-	 * @return
-	 */
 	@SuppressWarnings("unchecked")
 	private T buildEntity() {
 		return (T) ReflectionUtil.newInstance(entityClass);
 	}
-
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(String sql, Class<D> dtoClass, Object... parameters) throws ConnectionException, ModelException {
-		return find(sql, dtoClass, Arrays.asList(parameters));
+	
+	public <D> D load(String sql, Class<D> resultClass, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql, resultClass, Arrays.asList(parameters)).first();
 	}
 	
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(String sql, Class<D> dtoClass) throws ConnectionException, ModelException {
-		return find(sql, dtoClass, (List<Object>)null);
+	public <D> D load(String sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql, resultClass, (List<Object>)null).first();
 	}
 	
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(SqlBuilder sql, Class<D> dtoClass, Object... parameters) throws ConnectionException, ModelException {
-		return find(sql.toString(), dtoClass, Arrays.asList(parameters));
+	public <D> D load(SqlBuilder sql, Class<D> resultClass, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, Arrays.asList(parameters)).first();
 	}
 
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(SqlBuilder sql, Class<D> dtoClass) throws ConnectionException, ModelException {
-		return find(sql.toString(), dtoClass, (List<Object>)null);
+	public <D> D load(SqlBuilder sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, (List<Object>)null).first();
 	}
 	
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	public <D extends ModelDto<D>> DataList<D> find(SqlStatement sql, Class<D> dtoClass) throws ConnectionException, ModelException {
-		return find(sql.toString(), dtoClass, sql.getParameters());
+	public <D> D load(SqlStatement sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, sql.getParameters()).first();
+	}
+	
+	public <D> DataList<D> find(String sql, Class<D> resultClass, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql, resultClass, Arrays.asList(parameters));
+	}
+	
+	public <D> DataList<D> find(String sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql, resultClass, (List<Object>)null);
+	}
+	
+	public <D> DataList<D> find(SqlBuilder sql, Class<D> resultClass, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, Arrays.asList(parameters));
 	}
 
-	/**
-	 * @param sql
-	 * @param dtoClass
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
-	private <D extends ModelDto<D>> DataList<D> find(String sql, Class<D> dtoClass, List<Object> parameters) throws ConnectionException, ModelException {
-		return helper().find(sql, dtoClass, (List<Object>)parameters);
+	public <D> DataList<D> find(SqlBuilder sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, (List<Object>)null);
+	}
+	
+	public <D> DataList<D> find(SqlStatement sql, Class<D> resultClass) throws ConnectionException, ModelException {
+		return find(sql.toString(), resultClass, sql.getParameters());
 	}
 
-	/**
-	 * @param sql
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
+	private <D> DataList<D> find(String sql, Class<D> resultClass, List<Object> parameters) throws ConnectionException, ModelException {
+		return helper().find(sql, resultClass, (List<Object>)parameters);
+	}
+	
+	public <D> D load(String sql, ObjectBuilder<D> builder, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql, builder, Arrays.asList(parameters)).first();
+	}
+	
+	public <D> D load(String sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql, builder, (List<Object>)null).first();
+	}
+	
+	public <D> D load(SqlBuilder sql, ObjectBuilder<D> builder, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, Arrays.asList(parameters)).first();
+	}
+
+	public <D> D load(SqlBuilder sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, (List<Object>)null).first();
+	}
+	
+	public <D> D load(SqlStatement sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, sql.getParameters()).first();
+	}
+	
+	public <D> DataList<D> find(String sql, ObjectBuilder<D> builder, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql, builder, Arrays.asList(parameters));
+	}
+	
+	public <D> DataList<D> find(String sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql, builder, (List<Object>)null);
+	}
+	
+	public <D> DataList<D> find(SqlBuilder sql, ObjectBuilder<D> builder, Object... parameters) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, Arrays.asList(parameters));
+	}
+
+	public <D> DataList<D> find(SqlBuilder sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, (List<Object>)null);
+	}
+	
+	public <D> DataList<D> find(SqlStatement sql, ObjectBuilder<D> builder) throws ConnectionException, ModelException {
+		return find(sql.toString(), builder, sql.getParameters());
+	}
+
+	private <D> DataList<D> find(String sql, ObjectBuilder<D> builder, List<Object> parameters) throws ConnectionException, ModelException {
+		return helper().find(sql, builder, (List<Object>)parameters);
+	}
+
 	public CachedRowSet find(String sql, Object... parameters) throws ConnectionException, ModelException {
 		return find(sql, Arrays.asList(parameters));
 	}
 	
-	/**
-	 * @param sql
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(String sql) throws ConnectionException, ModelException {
 		return find(sql, (List<Object>)null);
 	}
 	
-	/**
-	 * @param sql
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(SqlBuilder sql, Object... parameters) throws ConnectionException, ModelException {
 		return find(sql.toString(), Arrays.asList(parameters));
 	}
 	
-	/**
-	 * @param sql
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(SqlBuilder sql) throws ConnectionException, ModelException {
 		return find(sql.toString(), (List<Object>)null);
 	}
 
-	/**
-	 * @param sql
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public CachedRowSet find(SqlStatement sql) throws ConnectionException, ModelException {
 		return find(sql.toString(), sql.getParameters());
 	}
 
-	/**
-	 * @param sql
-	 * @param parameters
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	private CachedRowSet find(String sql, List<Object> parameters) throws ConnectionException, ModelException {
 		return helper().find(sql, parameters);
 	}
 
-	/**
-	 * @param countSql
-	 * @param pageSize
-	 * @param pageNumber
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
 	public PagingHelper buildPaging(String countSql, int pageSize, int pageNumber) throws ConnectionException, ModelException {
 		return helper().buildPaging(countSql, pageSize, pageNumber);
 	}
-	
-	/**
-	 * @param statement
-	 * @return
-	 * @throws ConnectionException
-	 * @throws ModelException
-	 */
+
 	public int execute(SqlStatement statement) throws ConnectionException, ModelException {
 		return helper().execute(statement);
 	}
-	
-	/**
-	 * @param transaction
-	 * @throws ModelException
-	 */
+
 	public void start(Transaction transaction) throws ModelException {
 		helper().start(transaction);
 	}
 	
-	/**
-	 * @param transaction
-	 * @return
-	 * @throws ModelException
-	 */
 	public <C> C start(ResultTransaction<C> transaction) throws ModelException {
 		return helper().start(transaction);
 	}
 
-	/**
-	 * @return
-	 */
 	public ModelHelper helper() {
 		if(helper == null) {
 			helper = new ModelHelper(db);
 		}
 		return helper;
 	}
-	
-	/**
-	 * @return
-	 */
+
 	public SqlDialect dialect() {
 		if(dialect == null) {
 			dialect = (SqlDialect) ReflectionUtil.newInstance(db.getDataSource().getDialect());
@@ -1436,9 +1015,6 @@ public abstract class ModelDao<T extends ModelEntity<T>> implements ConnectionHa
 		return helper().getConnection();
 	}
 	
-	/**
-	 * @return
-	 */
 	public Database getDatabase() {
 		return db;
 	}
